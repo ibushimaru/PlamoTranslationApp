@@ -36,6 +36,14 @@ class PLaMoTranslator:
         # 翻訳中フラグ
         self.is_translating = False
         
+        # フォント設定（最初に設定）
+        self.base_font_size = 12
+        self.min_font_size = 8
+        self.max_font_size = 24
+        self.font_family = "BIZ UDPGothic"
+        self.jp_font = (self.font_family, self.base_font_size)
+        self.tiny_font = (self.font_family, 1)
+        
         # メインフレーム（左右分割）
         main_frame = tk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -45,7 +53,7 @@ class PLaMoTranslator:
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 5))
         left_frame.pack_propagate(False)
         
-        tk.Label(left_frame, text="📝 入力テキスト:", font=("BIZ UDPGothic", 14)).pack(anchor=tk.W)
+        tk.Label(left_frame, text="📝 入力テキスト:", font=(self.font_family, 14)).pack(anchor=tk.W)
         
         # 入力テキストエリアとスクロールバーのフレーム
         input_frame = tk.Frame(left_frame)
@@ -55,7 +63,7 @@ class PLaMoTranslator:
         self.input_text = tk.Text(
             input_frame,
             wrap=tk.WORD,
-            font=("BIZ UDPGothic", 12),
+            font=self.jp_font,
             bg="#2b2b2b",
             fg="white",
             insertbackground="white",
@@ -82,7 +90,7 @@ class PLaMoTranslator:
             button_frame,
             text="🔄 翻訳実行",
             command=self.translate,
-            font=("BIZ UDPGothic", 12),
+            font=(self.font_family, 12),
             relief=tk.RAISED,  # 立体的な枠線
             padx=20,
             pady=5
@@ -93,7 +101,7 @@ class PLaMoTranslator:
         self.status_label = tk.Label(
             button_frame,
             text="✅ ストリーミング翻訳対応",
-            font=("BIZ UDPGothic", 10),
+            font=(self.font_family, 10),
             fg="#00aa00"
         )
         self.status_label.pack(side=tk.RIGHT)
@@ -107,14 +115,14 @@ class PLaMoTranslator:
         result_header_frame = tk.Frame(right_frame)
         result_header_frame.pack(fill=tk.X, anchor=tk.W)
         
-        tk.Label(result_header_frame, text="✨ 翻訳結果:", font=("BIZ UDPGothic", 14)).pack(side=tk.LEFT)
+        tk.Label(result_header_frame, text="✨ 翻訳結果:", font=(self.font_family, 14)).pack(side=tk.LEFT)
         
         # コピーボタン
         self.copy_button = tk.Button(
             result_header_frame,
             text="📋 コピー",
             command=self.copy_result,
-            font=("BIZ UDPGothic", 10),
+            font=(self.font_family, 10),
             relief=tk.RAISED,  # 立体的な枠線
             padx=8,
             pady=2
@@ -125,13 +133,7 @@ class PLaMoTranslator:
         result_frame = tk.Frame(right_frame)
         result_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
         
-        # フォント設定
-        try:
-            self.jp_font = ("BIZ UDPGothic", 12)
-            self.tiny_font = ("BIZ UDPGothic", 1)
-        except:
-            self.jp_font = ("Arial Unicode MS", 12)
-            self.tiny_font = ("Arial Unicode MS", 1)
+        # フォント設定は既に上で設定済み
         
         # 結果テキストエリア
         self.result_text = tk.Text(
@@ -166,6 +168,9 @@ class PLaMoTranslator:
         # スクロール同期用フラグ
         self.sync_in_progress = False
         
+        # Command押下状態の追跡
+        self.cmd_pressed = False
+        
         # テキストエリアのスクロールイベントバインド（マウスホイール）
         self.input_text.bind('<MouseWheel>', self.on_input_mousewheel)
         self.result_text.bind('<MouseWheel>', self.on_result_mousewheel)
@@ -181,6 +186,21 @@ class PLaMoTranslator:
         result_frame.bind('<Enter>', lambda e: result_frame.focus_set())
         left_frame.bind('<Enter>', lambda e: left_frame.focus_set())
         right_frame.bind('<Enter>', lambda e: right_frame.focus_set())
+        
+        # Command+マウスホイール用のキーバインド
+        self.root.bind('<Command-MouseWheel>', self.on_font_size_change)
+        self.root.bind('<Control-MouseWheel>', self.on_font_size_change)  # WindowsとLinux用
+        
+        # Commandキーの押下/解放を追跡
+        self.root.bind('<KeyPress-Meta_L>', lambda e: setattr(self, 'cmd_pressed', True))
+        self.root.bind('<KeyRelease-Meta_L>', lambda e: setattr(self, 'cmd_pressed', False))
+        self.root.bind('<KeyPress-Meta_R>', lambda e: setattr(self, 'cmd_pressed', True))
+        self.root.bind('<KeyRelease-Meta_R>', lambda e: setattr(self, 'cmd_pressed', False))
+        # Control用も追加（Windows/Linux）
+        self.root.bind('<KeyPress-Control_L>', lambda e: setattr(self, 'cmd_pressed', True))
+        self.root.bind('<KeyRelease-Control_L>', lambda e: setattr(self, 'cmd_pressed', False))
+        self.root.bind('<KeyPress-Control_R>', lambda e: setattr(self, 'cmd_pressed', True))
+        self.root.bind('<KeyRelease-Control_R>', lambda e: setattr(self, 'cmd_pressed', False))
         
         # グローバルキーボード監視を開始
         if PYNPUT_AVAILABLE:
@@ -389,6 +409,39 @@ class PLaMoTranslator:
         
         self.sync_in_progress = False
         return "break"
+    
+    def on_font_size_change(self, event):
+        """Command+マウスホイールでフォントサイズ変更"""
+        # deltaの値に基づいてフォントサイズを増減
+        if event.delta > 0:  # 上スクロール = 拡大
+            self.base_font_size = min(self.base_font_size + 1, self.max_font_size)
+        else:  # 下スクロール = 縮小
+            self.base_font_size = max(self.base_font_size - 1, self.min_font_size)
+        
+        # 新しいフォントサイズを適用
+        self.update_font_sizes()
+        
+        # ステータスラベルに現在のサイズを一時表示
+        original_text = self.status_label.cget("text")
+        self.status_label.config(text=f"📏 フォントサイズ: {self.base_font_size}pt")
+        self.root.after(1500, lambda: self.status_label.config(text=original_text))
+        
+        return "break"  # イベントの伝播を防ぐ
+    
+    def update_font_sizes(self):
+        """全てのテキストウィジェットのフォントサイズを更新"""
+        # フォント設定を更新
+        self.jp_font = (self.font_family, self.base_font_size)
+        
+        # 入力テキストエリア
+        self.input_text.config(font=self.jp_font)
+        
+        # 結果テキストエリア
+        self.result_text.config(font=self.jp_font)
+        
+        # タグのフォントも更新
+        self.result_text.tag_configure("normal", font=self.jp_font)
+        self.result_text.tag_configure("streaming", font=self.jp_font)
     
     def load_and_translate(self):
         """クリップボードからテキストを読み込んで翻訳"""
