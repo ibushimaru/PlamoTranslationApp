@@ -55,9 +55,10 @@ class PLaMoTranslator:
         
         tk.Label(left_frame, text="📝 入力テキスト:", font=(self.font_family, 14)).pack(anchor=tk.W)
         
-        # 入力テキストエリアとスクロールバーのフレーム
-        input_frame = tk.Frame(left_frame)
+        # 入力テキストエリアとスクロールバーのフレーム（高さ固定）
+        input_frame = tk.Frame(left_frame, height=400)
         input_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
+        input_frame.pack_propagate(False)  # 高さ固定のため
         
         # 入力テキストエリア
         self.input_text = tk.Text(
@@ -129,9 +130,10 @@ class PLaMoTranslator:
         )
         self.copy_button.pack(side=tk.RIGHT)
         
-        # 結果テキストエリアとスクロールバーのフレーム
-        result_frame = tk.Frame(right_frame)
+        # 結果テキストエリアとスクロールバーのフレーム（高さ固定）
+        result_frame = tk.Frame(right_frame, height=400)
         result_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
+        result_frame.pack_propagate(False)  # 高さ固定のため
         
         # フォント設定は既に上で設定済み
         
