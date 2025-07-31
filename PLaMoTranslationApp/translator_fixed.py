@@ -31,7 +31,7 @@ class PLaMoTranslator:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("PLaMo翻訳 (ストリーミング対応)")
-        self.root.geometry("800x500")
+        self.root.geometry("800x600")  # 縦幅を100px拡大
         
         # 翻訳中フラグ
         self.is_translating = False
@@ -62,8 +62,11 @@ class PLaMoTranslator:
             selectbackground="#4a4a4a"
         )
         
-        # 入力エリア用スクロールバー
-        input_scrollbar = tk.Scrollbar(input_frame)
+        # 入力エリア用スクロールバー（結果エリアと統一するため幅を0に）
+        input_scrollbar = tk.Scrollbar(
+            input_frame,
+            width=0  # 結果エリアと統一
+        )
         input_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.input_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -79,10 +82,8 @@ class PLaMoTranslator:
             button_frame,
             text="🔄 翻訳実行",
             command=self.translate,
-            bg="#0066cc",
-            fg="white",
-            font=("BIZ UDPGothic", 12, "bold"),
-            relief=tk.FLAT,
+            font=("BIZ UDPGothic", 12),
+            relief=tk.RAISED,  # 立体的な枠線
             padx=20,
             pady=5
         )
@@ -102,7 +103,23 @@ class PLaMoTranslator:
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=False, padx=(5, 0))
         right_frame.pack_propagate(False)
         
-        tk.Label(right_frame, text="✨ 翻訳結果:", font=("BIZ UDPGothic", 14)).pack(anchor=tk.W)
+        # 翻訳結果のヘッダーフレーム
+        result_header_frame = tk.Frame(right_frame)
+        result_header_frame.pack(fill=tk.X, anchor=tk.W)
+        
+        tk.Label(result_header_frame, text="✨ 翻訳結果:", font=("BIZ UDPGothic", 14)).pack(side=tk.LEFT)
+        
+        # コピーボタン
+        self.copy_button = tk.Button(
+            result_header_frame,
+            text="📋 コピー",
+            command=self.copy_result,
+            font=("BIZ UDPGothic", 10),
+            relief=tk.RAISED,  # 立体的な枠線
+            padx=8,
+            pady=2
+        )
+        self.copy_button.pack(side=tk.RIGHT)
         
         # 結果テキストエリアとスクロールバーのフレーム
         result_frame = tk.Frame(right_frame)
@@ -294,6 +311,27 @@ class PLaMoTranslator:
         self.is_translating = False
         self.translate_button.config(text="🔄 翻訳実行", state=tk.NORMAL)
         self.status_label.config(text="❌ 翻訳エラー", fg="#aa0000")
+
+    def copy_result(self):
+        """翻訳結果をクリップボードにコピー"""
+        try:
+            result_text = self.result_text.get("1.0", tk.END).strip()
+            if result_text and result_text != "❌ テキストがありません":
+                pyperclip.copy(result_text)
+                
+                # コピー成功の視覚的フィードバック
+                original_text = self.copy_button.config('text')[-1]
+                
+                self.copy_button.config(text="✅ コピー完了")
+                self.root.after(1500, lambda: self.copy_button.config(text=original_text))
+                
+                print(f"📋 翻訳結果をクリップボードにコピー: '{result_text}'")
+            else:
+                print("📋 コピーできる翻訳結果がありません")
+        except Exception as e:
+            print(f"⚠️ コピーエラー: {e}")
+            self.copy_button.config(text="❌ エラー")
+            self.root.after(1500, lambda: self.copy_button.config(text="📋 コピー"))
 
     def translate(self):
         """翻訳実行"""
