@@ -165,7 +165,8 @@ class PLaMoTranslator:
         result_scrollbar.config(command=self.result_text.yview)
         
         # Command+C監視用の変数
-        self.c_press_times = []
+        self.cmd_c_times = []  # Command+Cが押された時刻のリスト
+        self.last_c_with_cmd = 0  # 最後にCommand+Cが押された時刻
         
         # スクロール同期用フラグ
         self.sync_in_progress = False
@@ -466,34 +467,35 @@ class PLaMoTranslator:
         except Exception as e:
             print(f"⚠️ クリップボード読み込みエラー: {e}")
     
-    def on_key_press(self, key):
-        """キー押下イベント"""
-        try:
-            if key == keyboard.Key.cmd and hasattr(keyboard.Key, 'cmd'):
-                # Command+C の検出
-                current_time = time.time()
-                self.c_press_times.append(current_time)
-                
-                # 3秒以内のCommand+C押下のみを保持
-                self.c_press_times = [t for t in self.c_press_times if current_time - t <= 3.0]
-                
-                # 1秒以内に2回Command+Cが押された場合
-                recent_presses = [t for t in self.c_press_times if current_time - t <= 1.0]
-                if len(recent_presses) >= 2:
-                    print("🚀 Command+C x2 検出！自動翻訳を開始...")
-                    threading.Thread(target=self.load_and_translate, daemon=True).start()
-                    self.c_press_times.clear()  # リセット
-        except Exception as e:
-            print(f"⚠️ キーイベント処理エラー: {e}")
     
     def start_global_hotkey(self):
         """グローバルホットキー監視開始"""
-        def on_press(key):
-            self.on_key_press(key)
+        from pynput.keyboard import GlobalHotKeys
         
-        listener = keyboard.Listener(on_press=on_press)
-        listener.daemon = True
-        listener.start()
+        # Command+Cのホットキーを登録
+        def on_cmd_c():
+            current_time = time.time()
+            self.cmd_c_times.append(current_time)
+            
+            # 3秒以内のCommand+C押下のみを保持
+            self.cmd_c_times = [t for t in self.cmd_c_times if current_time - t <= 3.0]
+            
+            # 1秒以内に2回Command+Cが押された場合
+            recent_presses = [t for t in self.cmd_c_times if current_time - t <= 1.0]
+            if len(recent_presses) >= 2:
+                print("🚀 Command+C x2 検出！自動翻訳を開始...")
+                threading.Thread(target=self.load_and_translate, daemon=True).start()
+                self.cmd_c_times.clear()  # リセット
+        
+        # ホットキーを設定
+        hotkeys = {
+            '<cmd>+c': on_cmd_c,
+            '<ctrl>+c': on_cmd_c  # Windows/Linux用
+        }
+        
+        self.hotkey_listener = GlobalHotKeys(hotkeys)
+        self.hotkey_listener.daemon = True
+        self.hotkey_listener.start()
     
     def run(self):
         """アプリケーション実行"""
