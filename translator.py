@@ -72,9 +72,9 @@ class PLaMoTranslator:
         
         # 入力テキストのヘッダーフレーム（右側と同じ構造）
         input_header_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
-        input_header_frame.pack(fill=tk.X, anchor=tk.W)
+        input_header_frame.pack(fill=tk.X)
         
-        ctk.CTkLabel(input_header_frame, text="入力テキスト", font=ctk.CTkFont(family=self.font_family, size=14)).pack(side=tk.LEFT)
+        ctk.CTkLabel(input_header_frame, text="入力内容", font=ctk.CTkFont(family=self.font_family, size=14)).pack()
         
         # 入力テキストエリアとスクロールバーのフレーム（高さ固定）
         input_frame = ctk.CTkFrame(left_frame, height=400)
@@ -107,13 +107,19 @@ class PLaMoTranslator:
         button_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
         button_frame.pack(fill=tk.X, pady=(10, 0))
         
-        # 翻訳ボタン
+        # 翻訳ボタン（オレンジ枠線、透明背景）
         self.translate_button = ctk.CTkButton(
             button_frame,
             text="翻訳実行",
             command=self.translate,
             font=ctk.CTkFont(family=self.font_family, size=12),
-            height=35
+            height=35,
+            fg_color="transparent",  # 背景を透明に
+            border_color="#FF6B35",  # オレンジ色の枠線
+            border_width=2,  # 枠線の太さ
+            text_color="#FFFFFF",  # 白色のテキスト
+            hover_color="#FF6B35",  # ホバー時はオレンジで塗りつぶし
+            anchor="center"  # テキストを中央配置
         )
         self.translate_button.pack(side=tk.LEFT)  # 左端に配置
         
@@ -124,20 +130,27 @@ class PLaMoTranslator:
         
         # 翻訳結果のヘッダーフレーム
         result_header_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
-        result_header_frame.pack(fill=tk.X, anchor=tk.W)
+        result_header_frame.pack(fill=tk.X)
         
-        ctk.CTkLabel(result_header_frame, text="翻訳結果", font=ctk.CTkFont(family=self.font_family, size=14)).pack(side=tk.LEFT)
+        # 中央に翻訳結果ラベル、右端にコピーボタン
+        ctk.CTkLabel(result_header_frame, text="翻訳結果", font=ctk.CTkFont(family=self.font_family, size=14)).pack()
         
-        # コピーボタン
+        # コピーボタン（右上に絶対配置）
         self.copy_button = ctk.CTkButton(
             result_header_frame,
             text="コピー",
             command=self.copy_result,
             font=ctk.CTkFont(family=self.font_family, size=10),
             width=60,
-            height=25
+            height=25,
+            fg_color="transparent",  # 背景を透明に
+            border_color="#FF6B35",  # オレンジ色の枠線
+            border_width=2,  # 枠線の太さ
+            text_color="#FFFFFF",  # 白色のテキスト
+            hover_color="#FF6B35",  # ホバー時はオレンジで塗りつぶし
+            anchor="center"  # テキストを中央配置
         )
-        self.copy_button.pack(side=tk.RIGHT)
+        self.copy_button.place(relx=1.0, x=-65, y=0)  # 右端から65px左に配置
         
         # 結果テキストエリアとスクロールバーのフレーム（高さ固定）
         result_frame = ctk.CTkFrame(right_frame, height=400)
@@ -184,9 +197,12 @@ class PLaMoTranslator:
             font=ctk.CTkFont(family=self.font_family, size=12),
             state="disabled",  # クリック不可
             text_color_disabled=("green", "lightgreen"),  # 無効時の文字色
-            height=35
+            height=35,
+            fg_color="transparent",  # 背景を透明に
+            border_color="#888888",  # グレーの枠線（ステータス表示用）
+            border_width=1  # 細い枠線
         )
-        self.status_label.pack(side=tk.LEFT)
+        self.status_label.pack(fill=tk.X)  # 全幅に拡張
         
         # Command+C監視用の変数
         self.cmd_c_times = []  # Command+Cが押された時刻のリスト
@@ -353,9 +369,9 @@ class PLaMoTranslator:
         # 結果エリアをクリア
         self.root.after(0, self.clear_result)
         
-        # 翻訳開始時のステータス設定（タイマーは使わない）
+        # 翻訳開始時のステータス設定（0.0秒から開始）
         self.root.after(0, lambda: self.status_label.configure(
-            text="翻訳中...     0.0秒|   0文字/秒",
+            text="  0.0秒|   0文字/秒",
             text_color_disabled=("blue", "lightblue")
         ))
         
@@ -379,7 +395,21 @@ class PLaMoTranslator:
             # ストリーミング出力を読み取り（1文字ずつ表示でUX向上）
             full_result = ""
             output_chars = 0
-            last_update_time = time.time()
+            
+            # 0.1秒単位で同期したタイマー更新を開始
+            def update_timer():
+                if self.is_translating:
+                    elapsed = time.time() - start_time
+                    # 0.1秒単位に丸める
+                    elapsed_rounded = round(elapsed * 10) / 10
+                    current_chars = len(full_result)
+                    cps = current_chars / elapsed if elapsed > 0 else 0
+                    self.update_speed_indicator(elapsed_rounded, cps)
+                    # 次の更新は100ms後
+                    self.root.after(100, update_timer)
+            
+            # タイマー更新を開始
+            self.root.after(100, update_timer)
             
             while True:
                 # 1文字ずつ読み込み（ストリーミング感を演出）
@@ -392,14 +422,6 @@ class PLaMoTranslator:
                 
                 # UIに文字を即座に追加（リアルタイムストリーミング）
                 self.root.after(0, lambda c=char: self.append_char(c))
-                
-                # 速度情報の更新（100ms毎に更新）
-                current_time = time.time()
-                if current_time - last_update_time >= 0.1:  # 100ms経過
-                    elapsed = current_time - start_time
-                    cps = output_chars / elapsed if elapsed > 0 else 0
-                    self.root.after(0, lambda e=elapsed, c=cps: self.update_speed_indicator(e, c))
-                    last_update_time = current_time
             
             # プロセス終了まで待機
             return_code = process.wait()
@@ -481,7 +503,11 @@ class PLaMoTranslator:
         
         # UI状態をリセット
         self.is_translating = False
-        self.translate_button.configure(text="翻訳実行", state="normal")
+        self.translate_button.configure(
+            text="翻訳実行", 
+            state="normal",
+            border_color="#FF6B35"  # 通常時はオレンジの枠線に戻す
+        )
         self.status_label.configure(text="翻訳完了", text_color_disabled=("green", "lightgreen"))
     
     def on_translation_complete_with_stats(self, elapsed_time, cps):
@@ -501,7 +527,11 @@ class PLaMoTranslator:
         
         # UI状態をリセット
         self.is_translating = False
-        self.translate_button.configure(text="翻訳実行", state="normal")
+        self.translate_button.configure(
+            text="翻訳実行", 
+            state="normal",
+            border_color="#FF6B35"  # 通常時はオレンジの枠線に戻す
+        )
         
         # 平均速度を計算
         avg_cps = 0
@@ -525,8 +555,15 @@ class PLaMoTranslator:
         self.result_text.config(state=tk.DISABLED)
         
         self.is_translating = False
-        self.translate_button.config(text="🔄 翻訳実行", state=tk.NORMAL)
-        self.status_label.config(text="❌ 翻訳エラー", fg="#aa0000")
+        self.translate_button.configure(
+            text="翻訳実行",
+            state="normal",
+            border_color="#FF6B35"  # エラー後も通常のオレンジ枠線に戻す
+        )
+        self.status_label.configure(
+            text="翻訳エラー", 
+            text_color_disabled=("red", "pink")
+        )
 
     def copy_result(self):
         """翻訳結果をクリップボードにコピー"""
@@ -536,18 +573,30 @@ class PLaMoTranslator:
                 pyperclip.copy(result_text)
                 
                 # コピー成功の視覚的フィードバック
-                original_text = self.copy_button.config('text')[-1]
+                original_text = self.copy_button.cget('text')
                 
-                self.copy_button.config(text="✅ コピー完了")
-                self.root.after(1500, lambda: self.copy_button.config(text=original_text))
+                self.copy_button.configure(
+                    text="コピー完了",
+                    border_color="#4CAF50"  # 成功時は緑の枠線
+                )
+                self.root.after(1500, lambda: self.copy_button.configure(
+                    text=original_text,
+                    border_color="#FF6B35"  # 元のオレンジ枠線に戻す
+                ))
                 
                 print(f"📋 翻訳結果をクリップボードにコピー: '{result_text}'")
             else:
                 print("📋 コピーできる翻訳結果がありません")
         except Exception as e:
             print(f"⚠️ コピーエラー: {e}")
-            self.copy_button.config(text="❌ エラー")
-            self.root.after(1500, lambda: self.copy_button.config(text="📋 コピー"))
+            self.copy_button.configure(
+                text="エラー",
+                border_color="#F44336"  # エラー時は赤の枠線
+            )
+            self.root.after(1500, lambda: self.copy_button.configure(
+                text="コピー",
+                border_color="#FF6B35"  # 元のオレンジ枠線に戻す
+            ))
 
     def translate(self):
         """翻訳実行"""
@@ -566,7 +615,11 @@ class PLaMoTranslator:
         
         # UI状態を更新
         self.is_translating = True
-        self.translate_button.configure(text="翻訳中...", state="disabled")
+        self.translate_button.configure(
+            text="翻訳中...", 
+            state="disabled",
+            border_color="#888888"  # 翻訳中はグレーの枠線
+        )
         self.status_label.configure(text="翻訳中...", text_color_disabled=("blue", "lightblue"))
         
         # バックグラウンドで翻訳を実行
