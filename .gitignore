@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon*
+._*
+.Spotlight-V100
+.Trashes
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Xcode
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+project.xcworkspace/xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# PyInstaller
+*.manifest
+*.spec
+dist/
+build/
+
+# App bundles
+*.app/
+*.dmg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Font files
+fonts/*.zip
+fonts/*/out/
+
+# Build artifacts
+*.o
+*.dylib
+
+# Test files
+*test*.py
+minimal_test.py
+ui_test.py
+super_simple.py
+
+# Setup/debug files
+debug_env.py
+setup.py
