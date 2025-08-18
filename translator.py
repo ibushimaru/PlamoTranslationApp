@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-PLaMo翻訳アプリ - 高速化版（インタラクティブモード対応）
+PLaMo翻訳アプリ - CustomTkinter版（最小限の変更）
 """
 
-import tkinter as tk
-from tkinter import scrolledtext
+import customtkinter as ctk
+import tkinter as tk  # Textウィジェットのタグ機能のため
 import subprocess
 import threading
 import pyperclip
@@ -19,6 +19,10 @@ except ImportError:
 import sys
 import os
 
+# CustomTkinterの基本設定
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
+
 # BudouX for adaptive Japanese text formatting (optional)
 try:
     import budoux
@@ -31,8 +35,8 @@ except ImportError:
 
 class PLaMoTranslator:
     def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("PLaMo翻訳 (高速版)")
+        self.root = ctk.CTk()
+        self.root.title("PLaMo翻訳 (モダンUI)")
         self.root.geometry("800x600")  # 縦幅を100px拡大
         
         # 翻訳中フラグ
@@ -58,18 +62,22 @@ class PLaMoTranslator:
         self.tiny_font = (self.font_family, 1)
         
         # メインフレーム（左右分割）
-        main_frame = tk.Frame(self.root)
+        main_frame = ctk.CTkFrame(self.root, fg_color="transparent")
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # 左側フレーム（入力エリア）
-        left_frame = tk.Frame(main_frame, width=380)
+        left_frame = ctk.CTkFrame(main_frame, width=380)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 5))
         left_frame.pack_propagate(False)
         
-        tk.Label(left_frame, text="📝 入力テキスト:", font=(self.font_family, 14)).pack(anchor=tk.W)
+        # 入力テキストのヘッダーフレーム（右側と同じ構造）
+        input_header_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
+        input_header_frame.pack(fill=tk.X, anchor=tk.W)
+        
+        ctk.CTkLabel(input_header_frame, text="入力テキスト", font=ctk.CTkFont(family=self.font_family, size=14)).pack(side=tk.LEFT)
         
         # 入力テキストエリアとスクロールバーのフレーム（高さ固定）
-        input_frame = tk.Frame(left_frame, height=400)
+        input_frame = ctk.CTkFrame(left_frame, height=400)
         input_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
         input_frame.pack_propagate(False)  # 高さ固定のため
         
@@ -96,55 +104,43 @@ class PLaMoTranslator:
         input_scrollbar.config(command=self.input_text.yview)
         
         # ボタンフレーム
-        button_frame = tk.Frame(left_frame)
+        button_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
         button_frame.pack(fill=tk.X, pady=(10, 0))
         
         # 翻訳ボタン
-        self.translate_button = tk.Button(
+        self.translate_button = ctk.CTkButton(
             button_frame,
-            text="🔄 翻訳実行",
+            text="翻訳実行",
             command=self.translate,
-            font=(self.font_family, 12),
-            relief=tk.RAISED,  # 立体的な枠線
-            padx=20,
-            pady=5
+            font=ctk.CTkFont(family=self.font_family, size=12),
+            height=35
         )
-        self.translate_button.pack(side=tk.LEFT)
-        
-        # 速度インジケーター表示
-        self.status_label = tk.Label(
-            button_frame,
-            text="⚡ 高速モード準備完了 (BF16)",
-            font=(self.font_family, 10),  # 等幅フォントで表示が安定
-            fg="#00aa00"
-        )
-        self.status_label.pack(side=tk.RIGHT)
+        self.translate_button.pack(side=tk.LEFT)  # 左端に配置
         
         # 右側フレーム（結果エリア）
-        right_frame = tk.Frame(main_frame, width=380)
+        right_frame = ctk.CTkFrame(main_frame, width=380)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=False, padx=(5, 0))
         right_frame.pack_propagate(False)
         
         # 翻訳結果のヘッダーフレーム
-        result_header_frame = tk.Frame(right_frame)
+        result_header_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
         result_header_frame.pack(fill=tk.X, anchor=tk.W)
         
-        tk.Label(result_header_frame, text="✨ 翻訳結果:", font=(self.font_family, 14)).pack(side=tk.LEFT)
+        ctk.CTkLabel(result_header_frame, text="翻訳結果", font=ctk.CTkFont(family=self.font_family, size=14)).pack(side=tk.LEFT)
         
         # コピーボタン
-        self.copy_button = tk.Button(
+        self.copy_button = ctk.CTkButton(
             result_header_frame,
-            text="📋 コピー",
+            text="コピー",
             command=self.copy_result,
-            font=(self.font_family, 10),
-            relief=tk.RAISED,  # 立体的な枠線
-            padx=8,
-            pady=2
+            font=ctk.CTkFont(family=self.font_family, size=10),
+            width=60,
+            height=25
         )
         self.copy_button.pack(side=tk.RIGHT)
         
         # 結果テキストエリアとスクロールバーのフレーム（高さ固定）
-        result_frame = tk.Frame(right_frame, height=400)
+        result_frame = ctk.CTkFrame(right_frame, height=400)
         result_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
         result_frame.pack_propagate(False)  # 高さ固定のため
         
@@ -176,6 +172,21 @@ class PLaMoTranslator:
         self.result_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.result_text.config(yscrollcommand=result_scrollbar.set)
         result_scrollbar.config(command=self.result_text.yview)
+        
+        # ステータスフレーム（結果エリアの下、左側ボタンフレームと同じ配置）
+        status_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
+        status_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # 速度インジケーター表示（ボタンウィジェットとして実装、ただしクリック不可）
+        self.status_label = ctk.CTkButton(
+            status_frame,
+            text="高速モード準備完了 (BF16)",
+            font=ctk.CTkFont(family=self.font_family, size=12),
+            state="disabled",  # クリック不可
+            text_color_disabled=("green", "lightgreen"),  # 無効時の文字色
+            height=35
+        )
+        self.status_label.pack(side=tk.LEFT)
         
         # Command+C監視用の変数
         self.cmd_c_times = []  # Command+Cが押された時刻のリスト
@@ -260,6 +271,71 @@ class PLaMoTranslator:
             for char in text
         )
         return "Japanese" if japanese_chars else "English"
+    
+    def contains_japanese(self, text):
+        """日本語が含まれているかチェック"""
+        return any(
+            '\u3040' <= char <= '\u309f' or  # ひらがな
+            '\u30a0' <= char <= '\u30ff' or  # カタカナ
+            '\u4e00' <= char <= '\u9fff'     # 漢字
+            for char in text
+        )
+    
+    def insert_with_budoux(self, text):
+        """BudouXを使用してテキストを挿入（極小スペースで改行制御）"""
+        if not parser:
+            self.result_text.insert("1.0", text, "normal")
+            return
+        
+        # 改行で分割して各行を処理
+        lines = text.split('\n')
+        for line_idx, line in enumerate(lines):
+            if line_idx > 0:
+                self.result_text.insert(tk.END, '\n', "normal")
+            
+            if not line.strip():
+                continue
+            
+            # BudouXで分割
+            chunks = parser.parse(line)
+            
+            # 禁則処理を適用
+            chunks = self.apply_kinsoku(chunks)
+            
+            # 極小スペースで結合して挿入
+            for i, chunk in enumerate(chunks):
+                self.result_text.insert(tk.END, chunk, "normal")
+                if i < len(chunks) - 1:
+                    # 極小フォントのスペースを挿入（改行可能位置）
+                    self.result_text.insert(tk.END, " ", "tiny_space")
+    
+    def apply_kinsoku(self, chunks):
+        """禁則処理を適用"""
+        # 行頭禁則文字
+        GYOTO_KINSHI = '、。，．）］｝」』】〉》〕・！？：；ぁぃぅぇぉゃゅょゎァィゥェォヵヶャュョヮ'
+        # 行末禁則文字
+        GYOMATSU_KINSHI = '（［｛「『【〈《〔'
+        
+        result = []
+        i = 0
+        while i < len(chunks):
+            chunk = chunks[i]
+            
+            # 次のチャンクが行頭禁則文字で始まる場合、結合
+            if i < len(chunks) - 1 and chunks[i + 1] and chunks[i + 1][0] in GYOTO_KINSHI:
+                combined = chunk + chunks[i + 1]
+                result.append(combined)
+                i += 2
+            # 現在のチャンクが行末禁則文字で終わる場合、次と結合
+            elif chunk and chunk[-1] in GYOMATSU_KINSHI and i < len(chunks) - 1:
+                combined = chunk + chunks[i + 1]
+                result.append(combined)
+                i += 2
+            else:
+                result.append(chunk)
+                i += 1
+        
+        return result
 
     def translate_streaming(self, text):
         """高速翻訳実行（最適化版）"""
@@ -278,9 +354,9 @@ class PLaMoTranslator:
         self.root.after(0, self.clear_result)
         
         # 翻訳開始時のステータス設定（タイマーは使わない）
-        self.root.after(0, lambda: self.status_label.config(
-            text="⏱️ 翻訳中...     0.0秒|   0文字/秒",
-            fg="#0066cc"
+        self.root.after(0, lambda: self.status_label.configure(
+            text="翻訳中...     0.0秒|   0文字/秒",
+            text_color_disabled=("blue", "lightblue")
         ))
         
         try:
@@ -381,39 +457,51 @@ class PLaMoTranslator:
     def update_speed_indicator(self, elapsed_time, cps):
         """速度インジケーターを更新"""
         # 数字を固定幅でフォーマット（視覚的安定性向上）
-        time_str = f"{elapsed_time:5.1f}"  # 5文字幅で右寄せ
+        time_str = f"{elapsed_time:5.1f}"  # 5文字庅で右寄せ
         cps_str = f"{cps:4.0f}"  # 4文字幅で右寄せ
-        self.status_label.config(
-            text=f"⏱️ {time_str}秒|{cps_str}文字/秒",
-            fg="#0066cc"
+        self.status_label.configure(
+            text=f"{time_str}秒|{cps_str}文字/秒",
+            text_color_disabled=("blue", "lightblue")
         )
 
     def on_translation_complete(self):
         """翻訳完了時の処理"""
         # ストリーミング色を通常色に変更
         self.result_text.config(state=tk.NORMAL)
-        content = self.result_text.get("1.0", tk.END)
+        content = self.result_text.get("1.0", tk.END).strip()
         self.result_text.delete("1.0", tk.END)
-        self.result_text.insert("1.0", content, "normal")
+        
+        # BudouXで適切な改行位置を設定（日本語の場合のみ）
+        if BUDOUX_AVAILABLE and self.contains_japanese(content):
+            self.insert_with_budoux(content)
+        else:
+            self.result_text.insert("1.0", content, "normal")
+        
         self.result_text.config(state=tk.DISABLED)
         
         # UI状態をリセット
         self.is_translating = False
-        self.translate_button.config(text="🔄 翻訳実行", state=tk.NORMAL)
-        self.status_label.config(text="✅ 翻訳完了", fg="#00aa00")
+        self.translate_button.configure(text="翻訳実行", state="normal")
+        self.status_label.configure(text="翻訳完了", text_color_disabled=("green", "lightgreen"))
     
     def on_translation_complete_with_stats(self, elapsed_time, cps):
         """翻訳完了時の処理（統計情報付き）"""
         # ストリーミング色を通常色に変更
         self.result_text.config(state=tk.NORMAL)
-        content = self.result_text.get("1.0", tk.END)
+        content = self.result_text.get("1.0", tk.END).strip()
         self.result_text.delete("1.0", tk.END)
-        self.result_text.insert("1.0", content, "normal")
+        
+        # BudouXで適切な改行位置を設定（日本語の場合のみ）
+        if BUDOUX_AVAILABLE and self.contains_japanese(content):
+            self.insert_with_budoux(content)
+        else:
+            self.result_text.insert("1.0", content, "normal")
+        
         self.result_text.config(state=tk.DISABLED)
         
         # UI状態をリセット
         self.is_translating = False
-        self.translate_button.config(text="🔄 翻訳実行", state=tk.NORMAL)
+        self.translate_button.configure(text="翻訳実行", state="normal")
         
         # 平均速度を計算
         avg_cps = 0
@@ -424,9 +512,9 @@ class PLaMoTranslator:
         output_chars = len(content.strip())
         
         # ステータスに簡潔な統計情報を表示
-        self.status_label.config(
-            text=f"✅ {output_chars}文字|{elapsed_time:.1f}秒|平均{avg_cps:.0f}文字/秒",
-            fg="#00aa00"
+        self.status_label.configure(
+            text=f"{output_chars}文字|{elapsed_time:.1f}秒|平均{avg_cps:.0f}文字/秒",
+            text_color_disabled=("green", "lightgreen")
         )
 
     def show_error(self, error_msg):
@@ -478,8 +566,8 @@ class PLaMoTranslator:
         
         # UI状態を更新
         self.is_translating = True
-        self.translate_button.config(text="⏸️ 翻訳中...", state=tk.DISABLED)
-        self.status_label.config(text="🔄 翻訳中...", fg="#0066cc")
+        self.translate_button.configure(text="翻訳中...", state="disabled")
+        self.status_label.configure(text="翻訳中...", text_color_disabled=("blue", "lightblue"))
         
         # バックグラウンドで翻訳を実行
         thread = threading.Thread(target=self.translate_streaming, args=(text,), daemon=True)
