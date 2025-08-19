@@ -74,3 +74,9 @@ super_simple.py
 # Setup/debug files
 debug_env.py
 setup.py
+
+# Confidential files - NEVER COMMIT
+PLaMo2Translate仕様書.pdf
+*仕様書*.pdf
+*.confidential
+*.secret
